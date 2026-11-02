@@ -359,6 +359,10 @@ WHERE u.rn = 1
 ORDER BY u.Precio;
 ```
 
+Captura de la consulta en SSMS:
+
+![Comparación del mismo producto entre cadenas](capturas/comparacion-cadenas-protein-1l.jpg)
+
 ## Compras y vista de mejor precio
 
 `cli.registrar_compra` guarda la compra (`D_Compra` + `D_CompraDetalle`) y la
