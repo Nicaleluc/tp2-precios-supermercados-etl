@@ -322,6 +322,43 @@ cargadas. Tres niveles de matching:
 Cada producto se guarda con `CategoriaCanonica` (rubro unificado,
 `etl/dominios/precios/categorias.py`), para agrupar por rubro.
 
+### Ejemplo de resultado real: el mismo producto en todas las cadenas
+
+Comparación del EAN `7790742358608` (leche La Serenísima Protein 1 L) entre las
+cadenas cargadas, tomando el último precio de cada una:
+
+| Cadena | Precio | Fecha |
+|---|---:|---|
+| Cordiez | 2.669,00 | 19/10/2026 |
+| La Banderita | 2.699,00 | 19/10/2026 |
+| Vea | 3.118,00 | 19/10/2026 |
+| DIA | 3.119,00 | 19/10/2026 |
+| Cooperativa Obrera | 3.119,00 | 19/10/2026 |
+| Carrefour | 3.119,00 | 19/10/2026 |
+| Hipermercado Carrefour | 3.119,00 | 13/10/2026 |
+| Market | 3.180,00 | 13/10/2026 |
+| Express | 3.275,00 | 13/10/2026 |
+
+La diferencia entre la cadena más barata y la más cara es del **22,7 %** para el
+mismo producto. La consulta que genera la tabla:
+
+```sql
+WITH ult AS (
+  SELECT o.ProductoId, o.Precio, o.Fecha,
+         ROW_NUMBER() OVER (PARTITION BY p.CadenaId
+                            ORDER BY o.Fecha DESC, o.OfertaId DESC) AS rn
+  FROM D_PrecioOferta o
+  JOIN D_PrecioProducto p ON p.ProductoId = o.ProductoId
+  WHERE p.Ean = '7790742358608'
+)
+SELECT c.Nombre AS Cadena, p.Nombre AS Producto, u.Precio, u.Fecha
+FROM ult u
+JOIN D_PrecioProducto p ON p.ProductoId = u.ProductoId
+JOIN D_PrecioCadena  c ON c.CadenaId = p.CadenaId
+WHERE u.rn = 1
+ORDER BY u.Precio;
+```
+
 ## Compras y vista de mejor precio
 
 `cli.registrar_compra` guarda la compra (`D_Compra` + `D_CompraDetalle`) y la
