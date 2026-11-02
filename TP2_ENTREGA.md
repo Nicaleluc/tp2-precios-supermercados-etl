@@ -20,7 +20,7 @@
 - **Proyecto:** ETL de catálogos, precios y sucursales de supermercados argentinos a
   SQL Server, con comparador de canasta y registro de compras.
 - **Nombre de repositorio sugerido:** `tp2-precios-supermercados-etl`
-- **Enlace público:** `{{REPO_LINK}}` (reemplazar al publicar)
+- **Enlace público:** `https://github.com/Nicaleluc/tp2-precios-supermercados-etl` (reemplazar al publicar)
 - **Stack:** Python 3.12, SQL Server, `pyodbc`, `pytest`.
 - **Documentación:** `README.md` (descripción, fuentes, arquitectura, instalación,
   uso, tests, solución de problemas y conclusiones personales).
@@ -42,7 +42,7 @@ a 10 de la materia.
 - [x] `README.md` con descripción, tecnologías, instrucciones, ejemplos y
       conclusiones personales.
 - [x] Al menos 3 commits significativos (secuencia sugerida abajo).
-- [ ] Enlace público al repositorio (reemplazar `{{REPO_LINK}}`).
+- [ ] Enlace público al repositorio (reemplazar `https://github.com/Nicaleluc/tp2-precios-supermercados-etl`).
 - [x] `respuestas_scrum.md` con las 5 preguntas.
 
 ## Cómo publicar el repositorio (Git)
@@ -80,7 +80,7 @@ git remote add origin https://github.com/<usuario>/tp2-precios-supermercados-etl
 git push -u origin main
 ```
 
-> Reemplazar `<usuario>` y `{{REPO_LINK}}` por el usuario y la URL reales de GitHub.
+> Reemplazar `<usuario>` y `https://github.com/Nicaleluc/tp2-precios-supermercados-etl` por el usuario y la URL reales de GitHub.
 > No subir `.env` (contiene credenciales); el repo incluye `.env.template`.
 
 ## Cómo se entrega
