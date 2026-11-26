@@ -1,510 +1,251 @@
-# precios-supermercados-etl — Precios de supermercados → SQL Server + comparador
+﻿<h1 align="center">OPCB · Observatorio de Precios de la Canasta Básica</h1>
 
-> **Proyecto Integrador Final (2026):** este repositorio se reutiliza como base del
-> **Observatorio de Precios de la Canasta Básica (OPCB)**. La planificación, el informe de
-> ética, el tablero y el guion de la presentación están en
-> [`docs/proyecto/`](docs/proyecto/README.md). El contenido de abajo documenta el ETL original
-> del TP II, que sigue siendo la base técnica del proyecto.
+<p align="center">
+  <em>Del catálogo disperso de cada supermercado a una serie comparable, trazable y publicable.</em>
+</p>
 
-> **Trabajo Práctico II — Prácticas Profesionalizantes I (INA)**  
-> Estudiante: Nicolás Lucero · Docente: MSc. Ángel Daniel Fuentes S. · Entrega: 26/10/2026  
-> Parte 2 (reflexión sobre Scrum): [`respuestas_scrum.md`](respuestas_scrum.md)
-
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![Python](https://img.shields.io/badge/python-3.12%2B-blue)
-
-ETL de catálogos, precios y sucursales de supermercados argentinos a **SQL Server**
-(base `precios-supermercados-etl`, tablas `D_Precio*`), más:
-
-- **comparador de canasta**: cargás la lista de lo que tenés que comprar y te dice
-  qué cadena conviene por ítem y el total "carrito dividido";
-- **registro de compras** + vista con el **mejor precio actual** por ítem.
-
-Repo **fuera del ecosistema DELI**: no comparte el código de `deli/` (tiene su
-propio `db.py`). Por eso **no** lleva prefijo `deli-` (como `tester-posnet`,
-`editor-reportes`).
+<p align="center">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white">
+  <img alt="SQL Server" src="https://img.shields.io/badge/SQL%20Server-2019%2B-CC2927?logo=microsoftsqlserver&logoColor=white">
+  <img alt="pytest" src="https://img.shields.io/badge/tests-pytest-0A9EDC?logo=pytest&logoColor=white">
+  <img alt="License" src="https://img.shields.io/badge/license-MIT-green">
+  <img alt="Estado" src="https://img.shields.io/badge/estado-MVP-yellow">
+  <img alt="Trello" src="https://img.shields.io/badge/tablero-Trello-0079BF?logo=trello&logoColor=white">
+</p>
 
 ---
 
-## Índice
+## Qué es esto
 
-- [Qué hace](#qué-hace)
-- [Fuentes de datos](#fuentes-de-datos)
-- [Cómo funciona](#cómo-funciona)
-- [Requisitos](#requisitos)
-- [Instalación y uso](#instalación-y-uso)
-- [Cadenas soportadas](#cadenas-soportadas)
-- [Configuración (`.env`)](#configuración-env)
-- [Esquema del store](#esquema-del-store)
-- [SEPA (precio por sucursal)](#sepa-precio-por-sucursal)
-- [Comparador cruzado](#comparador-cruzado)
-- [Compras y vista de mejor precio](#compras-y-vista-de-mejor-precio)
-- [Automatización](#automatización)
-- [Estructura](#estructura)
-- [Buenas prácticas / notas técnicas](#buenas-prácticas--notas-técnicas)
-- [Pendientes conocidos](#pendientes-conocidos)
-- [Solución de problemas](#solución-de-problemas)
-- [Licencia](#licencia)
+OPCB es un pipeline de datos que integra los catálogos públicos de cadenas de supermercados de
+Bahía Blanca, normaliza productos y unidades, empareja el mismo producto entre cadenas y publica el
+costo de una canasta básica con su variación semanal.
+
+Nació como Proyecto Integrador Final de **Prácticas Profesionalizantes I** (INA, Tecnicatura en
+Ciencia de Datos e IA) y se apoya en el ETL desarrollado en el TP II.
+
+> **Alcance:** MVP académico. No predice precios ni reemplaza una medición oficial de inflación.
+> La metodología y sus límites están documentados en
+> [`docs/proyecto/01-planificacion/proyecto.md`](docs/proyecto/01-planificacion/proyecto.md).
 
 ---
 
-## Qué hace
+## El problema en una frase
 
-1. **Extract**: trae catálogos y precios de cada cadena desde su storefront/API
-   pública (VTEX, la API de la Coope, scraping de La Banderita) y, opcionalmente,
-   desde el **SEPA** oficial (precio por sucursal).
-2. **Transform**: normaliza a un modelo único `Producto` + `Oferta` (EAN, nombre,
-   marca, categoría, unidad, precio, precio de lista, promo, stock).
-3. **Load**: `MERGE` idempotente en SQL Server, con **histórico de precios por día**.
-4. **Comparar**: dado un término, EAN o producto, responde qué cadena conviene y
-   el total por cadena / carrito dividido.
-5. **Compras**: registra lo que compraste y una **vista** te muestra el precio más
-   barato actual de cada ítem en Vea/Coope/Carrefour/La Banderita.
+Comparar el costo de la misma canasta entre supermercados exige abrir tres sitios, buscar treinta
+productos en cada uno y adivinar si "Arroz 1 kg" y "Arroz largo fino 1000 g" son el mismo bien.
+OPCB convierte ese trabajo manual en una consulta reproducible.
 
-## Fuentes de datos
+**Caso concreto:** la botella de 1 L de La Serenísima Protein (EAN `7790742358608`) aparece en
+nueve góndolas con **siete nombres distintos** y precios de **$2.669 a $3.275**: **22,7 %** de
+diferencia por el mismo producto.
 
-| Plataforma | Cadenas | Cómo se obtiene |
+---
+
+## Arquitectura
+
+```text
+              ┌──────────────┐   ┌───────────────┐   ┌──────────────┐
+ Catálogos →  │   conectores │ → │ normalización │ → │   matching   │
+ (cadenas)    └──────────────┘   └───────────────┘   └──────┬───────┘
+                                                            │
+                       ┌────────────────────────────────────┴────────┐
+                       │                                             │
+                ┌──────▼──────┐                             ┌────────▼────────┐
+                │  SQL Server │                             │  canasta + KPIs │
+                │  (histórico)│                             └────────┬────────┘
+                └─────────────┘                                      │
+                       │                                    ┌────────▼────────┐
+                       └───────────────────────────────────►│  informe + CLI  │
+                                                            └─────────────────┘
+```
+
+| Capa | Módulo | Responsabilidad |
 |---|---|---|
-| **VTEX** | Vea, Jumbo, Disco, Carrefour, Changomas, Cordiez, DIA | Endpoints públicos del storefront (Intelligent Search / Catalog Search). |
-| **API propia** | Cooperativa Obrera ("La Coope en Casa") | `api.lacoopeencasa.coop` (búsqueda paginada + detalle + localidades). |
-| **Scraping HTML** | La Banderita (super local de Bahía Blanca) | `/shop?s=` + `Products_Search/List_Scroll` (paginado) + catálogo por marcas. |
-| **SEPA (oficial)** | Comercios adheridos | ZIP oficial diario → precio **por sucursal** + EAN. |
+| Conectores | `etl/conn/` | obtener catálogos por cadena, aislados entre sí (VTEX, Coope, La Banderita) |
+| Normalización | `etl/dominios/precios/normalizar*.py` | nombres, unidades y EAN |
+| Matching | `etl/dominios/comparador/matching.py` | identificar el mismo producto entre cadenas |
+| Persistencia | `etl/dominios/precios/repository.py` | histórico idempotente en SQL Server (`D_Precio*`) |
+| Canasta | `etl/dominios/comparador/canasta.py` | costo, variación y brecha |
+| Producto | `cli/` | consultas, comparación y reportes |
+| Calidad | `tests/` | normalización, matching e integridad |
 
-## Cómo funciona
+---
 
-```
-Fuentes (VTEX / Coope / La Banderita / SEPA)
-        │
-        ▼
-normalizar → Producto + Oferta (modelo único entre cadenas)
-        │
-        ▼
-SQL Server (base precios-supermercados-etl, tablas D_Precio*)
-  D_PrecioCadena    (upsert por Codigo)
-  D_PrecioSucursal  (upsert por CadenaId+CodigoSucursal; fila 'ONLINE')
-  D_PrecioProducto  (upsert por CadenaId+SkuId)
-  D_PrecioOferta    (upsert por ProductoId+SucursalId+Fecha → histórico diario)
-        │
-        ├── comparador de canasta → "conviene Vea para la leche, Coope para la yerba"
-        └── compras + vista → "de lo que compraste, dónde está más barato hoy"
-```
+## Stack
 
-* **Idempotencia** (todo por `MERGE`): `Producto` por `(CadenaId, SkuId)`,
-  `Oferta` por `(ProductoId, SucursalId, Fecha)`. Re-correr el mismo día
-  actualiza, no duplica.
-* **Sucursal `ONLINE`**: el precio online es válido para toda la cadena, no por
-  local. Se crea una sucursal sintética por cadena (`CodigoSucursal='ONLINE'`)
-  para que la FK nunca quede nula; el precio por local (SEPA) usa la sucursal real.
-* **Histórico**: un registro por producto/sucursal/día → sirve para ver variación.
+- **Python 3.12** — `requests`, `pyodbc`, `SQLAlchemy`, `beautifulsoup4`
+- **SQL Server** — persistencia del histórico de precios
+- **pytest** — pruebas unitarias e integridad
+- **Markdown + HTML** — documentación
+- **Trello** — gestión ágil del proyecto
+- **GitHub** — control de versiones y trazabilidad
 
-## Requisitos
+---
 
-* Python ≥ 3.12
-* **ODBC Driver 18 for SQL Server**
-* Acceso a SQL Server (base `precios-supermercados-etl`) con permiso de
-  `CREATE TABLE`/`MERGE` en `dbo`. Windows Auth por defecto (o usuario/pass).
-* Conexión a internet (los catálogos se consultan en vivo)
+## Cómo correrlo
 
-## Instalación y uso
+### 1. Requisitos
+
+- Python 3.12+
+- SQL Server con una base disponible
+- Acceso a los catálogos públicos de las cadenas
+
+### 2. Instalación
 
 ```bash
+git clone https://github.com/Nicaleluc/tp2-precios-supermercados-etl.git
+cd tp2-precios-supermercados-etl
+python -m venv .venv
+.venv\Scripts\activate        # Windows
 pip install -e .
-copy .env.template .env      # completar SQL_SERVER / SQL_DATABASE
 ```
 
-**Cargar precios:**
+### 3. Configuración
 
 ```bash
-py -u -m cli.importar_precios
-py -u -m cli.importar_precios --cadena vea --termino leche --termino yerba
-py -u -m cli.importar_precios --cadena cooperativa_obrera --termino leche
-py -u -m cli.importar_precios --cadena la_banderita --termino leche --ean-ficha
-py -u -m cli.importar_precios --catalogo          # catálogo completo (VTEX/Coope/Banderita)
+copy .env.template .env       # completar credenciales locales
 ```
 
-**Cargar sucursales (`D_PrecioSucursal`):**
+Variables principales (nunca subir `.env` al repo):
+
+```text
+DB_SERVER=localhost
+DB_NAME=precios-supermercados-etl
+DB_USER=...
+DB_PASSWORD=...
+```
+
+### 4. Pipeline
+
+Los `.bat` de la raíz son atajos de los comandos de abajo (doble clic o consola).
 
 ```bash
-py -u -m cli.cargar_sucursales            # semilla Bahía Blanca + localidades Coope
-py -u -m cli.cargar_sucursales --sin-coope
+py -u -m cli.importar_precios --catalogo      # ingesta de catálogos (o cargar_todo.bat)
+py -u -m cli.cargar_sucursales                # sucursales por cadena
+py -u -m cli.cargar_sepa                      # cadena SEPA
+py -u -m cli.comparar leche yerba aceite      # comparación sobre la base (o comparar.bat)
+py -u -m cli.comparar --ean 7790742358608     # un producto en todas las cadenas
+py -u -m cli.chequear_precio <termino>        # control puntual de precio
 ```
 
-**Cargar SEPA (precio por sucursal):**
+### 5. Tests
 
 ```bash
-py -u -m cli.cargar_sepa --auto                              # baja el ZIP del día
-py -u -m cli.cargar_sepa --zip .\sepa_martes.zip --max-grupos 2 --limite 500
+pytest -q
 ```
 
-**Chequear si un precio es "normal" (referencia SEPA):**
+Las pruebas unitarias corren sin base de datos. Las de integración se saltean si no hay conexión.
 
-```bash
-py -u -m cli.chequear_precio --ean 7798338291803
-py -u -m cli.chequear_precio --ean 7798338291803 --precio 3190
-```
+---
 
-**Enriquecer EAN de la Coope (su API no lo expone):**
+## Metodología (resumen)
 
-```bash
-py -u -m cli.enriquecer_ean_coope --limite 50 --dry-run
-py -u -m cli.enriquecer_ean_coope
-```
+1. **Canasta:** 30 productos agrupados en almacén, frescos, limpieza y bebidas. El criterio de
+   inclusión está en [`docs/proyecto/01-planificacion/product-backlog.md`](docs/proyecto/01-planificacion/product-backlog.md) (HU-04).
+2. **Unidad de comparación:** precio por unidad de medida (kg, l, unidad), no precio de góndola.
+3. **Matching:** EAN exacto primero; similitud de texto y unidad después, con umbral de confianza
+   (≥ 70 %) y revisión manual de la canasta.
+4. **Variación:** \((P_t - P_{t-1}) / P_{t-1}\), sobre el mismo conjunto de productos.
+5. **Calidad:** se descartan precios ≤ 0, EAN inválidos y duplicados; cada descarte se registra.
 
-> La Coope no publica el EAN, pero su autocomplete **busca por EAN**. El CLI
-> toma los productos sin EAN, busca candidatos en VTEX/SEPA por similitud de
-> nombre y confirma consultando ese EAN en la Coope (si devuelve el mismo
-> `cod_interno`, setea el EAN).
+---
 
-**Comparar una lista de compras:**
+## Resultados (dataset operativo del TP II, 13–20/10/2026)
 
-```bash
-py -u -m cli.comparar leche yerba aceite        # lee la base (todas las cadenas)
-py -u -m cli.comparar --vivo leche pan          # en vivo (solo VTEX)
-py -u -m cli.comparar --ean 7793913013474       # un EAN en todas las cadenas
-py -u -m cli.comparar --producto "Leche entera 1 litro"   # equivalentes (fuzzy)
-py -u -m cli.comparar --por-unidad leche        # elige el más barato por kg/l
-```
-
-**Registrar una compra:**
-
-```bash
-py -u -m cli.registrar_compra --comercio "Verdulería" --total 10000 ^
-  --item "Mandarina:1:kg" --item "Kiwi:0.5:kg" --item "Frutilla:0.25:kg" ^
-  --item "Banana:0.54:kg" --item "Brócoli:0.6:kg" --item "Chaucha:0.25:kg"
-```
-
-Se importa por paquete raíz (`from etl.dominios.precios...`), nunca con
-`sys.path.insert`.
-
-En Windows: `cargar.bat`, `cargar_sucursales.bat`, `cargar_todo.bat`,
-`cargar_diario.bat`, `cargar_semanal.bat`, `cargar_sepa.bat`, `comparar.bat`
-(activan `.venv` si existe y reenvían los argumentos).
-
-### Flags
-
-| CLI | Flag | Efecto |
+| Métrica | Valor | Cómo se obtiene |
 |---|---|---|
-| `importar_precios` | `--cadena ID` | Cadena a cargar (repetible). Default: `CADENAS` del `.env`. |
-| | `--termino T` | Término de búsqueda (repetible). Default: semilla de `constants.py`. |
-| | `--por-pagina N` / `--paginas N` | Paginación por término (`--paginas` también rige La Banderita). |
-| | `--catalogo` / `--cat-paginas N` | Recorrer **todo el catálogo** (VTEX por categoría, Coope por categoría, La Banderita por marca). |
-| | `--cat-marcas N` / `--cat-terminos N` | Limitar marcas (Banderita) / categorías-término (Coope) en `--catalogo`. |
-| | `--ean-ficha` | La Banderita: traer EAN abriendo cada ficha (1 request c/u). |
-| `comparar` | `terminos...` | Lo que hay que comprar (si se omite, lista semilla). |
-| | `--vivo` | Consultar los sitios VTEX en vivo (default: leer la base). |
-| | `--ean EAN` | Comparar un EAN puntual entre cadenas. |
-| | `--producto NOMBRE` / `--marca M` | Equivalentes (fuzzy) de un producto entre cadenas. |
-| | `--por-unidad` | Elegir el más barato por kg/l (no por precio absoluto). |
-| | `--cadena ID` | Filtrar a cadenas (repetible). |
-| `cargar_sucursales` | `--sin-coope` | No traer localidades de la Coope (solo semilla BB). |
-| `cargar_sepa` | `--auto` / `--dia D` / `--cache DIR` | Bajar el ZIP del día (o de un día) desde datos.gob.ar. |
-| | `--zip FILE` | Cargar un ZIP ya descargado (outer o inner). |
-| | `--max-grupos N` / `--limite N` | Procesar solo N inner ZIPs / cortar tras N precios (prueba). |
-| | `--banderas F.json` | Mapa id_bandera → nombre comercial (opcional). |
-| `registrar_compra` | `--comercio` / `--total` / `--fecha` | Cabecera de la compra. |
-| | `--item Nombre:Cantidad:Unidad[:PrecioUnitario]` | Ítem (repetible). |
-| | `--json FILE` | Alternativa: JSON con comercio/total/items. |
+| Cadenas con datos cargados | 12 (16 configuradas) | `D_PrecioCadena` |
+| Precios observados | 33.900 | `D_PrecioOferta` |
+| Productos en catálogo | 21.235 | `D_PrecioProducto` |
+| EAN distintos | 14.356 | `D_PrecioProducto.Ean` |
+| Productos comparables en ≥ 3 cadenas | 1.491 | join por EAN entre cadenas |
+| Brecha máxima en el caso de prueba | +22,7 % ($606) | `cli.comparar --ean` |
 
-### Tests
+Las cifras se recalculan con los comandos de la sección 4: no hay valores escritos a mano en el
+código.
 
-```bash
-pip install -e ".[dev]"
-pytest
+El dataset operativo proviene del relevamiento del TP II; el MVP del OPCB se apoya en esa base y
+restringe la canasta a tres cadenas (SEPA, La Banderita y Coope) para que la comparación sea
+verificable. Las doce cadenas cargadas quedan disponibles para consultas puntuales.
+
+<p align="center">
+  <em>Capturas del tablero y de la comparación: carpeta <code>capturas/</code>.</em>
+</p>
+
+---
+
+## Estructura del repositorio
+
+```text
+tp2-precios-supermercados-etl/
+├── cli/                 # comandos de línea de comandos
+├── config/              # configuración y rutas
+├── etl/
+│   ├── conn/            # conectores por cadena (vtex, coope, la_banderita, sepa)
+│   └── dominios/
+│       ├── precios/     # normalización, esquema, repositorio
+│       └── comparador/  # matching y canasta
+├── sql/                 # esquema y migraciones (D_Precio*, compras, vistas)
+├── tests/               # pruebas
+├── capturas/            # evidencias (comparaciones, tablero)
+├── docs/proyecto/       # planificación, documentación, trello y presentación
+├── *.bat                # atajos de ejecución
+├── .env.template
+├── pyproject.toml
+├── pytest.ini
+├── LICENSE
+└── README.md
 ```
 
-Cubren el transform (VTEX/Coope/La Banderita), el matching y un test de
-integración con la DB (se salta si no hay conexión).
+---
 
-## Cadenas soportadas
+## Ética y datos
 
-El registro vive en `etl/dominios/precios/constants.py` (id, nombre, host,
-api_host). Verificado en vivo: las cadenas VTEX devuelven el mismo shape (marca,
-categoría, categoryId, EAN, unidad, imagen y precio al 100%).
+El proyecto publica precios de terceros y conclusiones sobre el costo de vida. Por eso:
 
-| id | Cadena | Host | Estado |
-|---|---|---|---|
-| `vea` | Vea | `www.vea.com.ar` | ✅ VTEX |
-| `jumbo` | Jumbo | `www.jumbo.com.ar` | ✅ VTEX |
-| `disco` | Disco | `www.disco.com.ar` | ✅ VTEX |
-| `carrefour` | Carrefour | `www.carrefour.com.ar` | ✅ VTEX |
-| `changomas` | Changomas (Más Online) | `www.masonline.com.ar` | ✅ VTEX |
-| `cordiez` | Cordiez | `www.cordiez.com.ar` | ✅ VTEX |
-| `dia` | DIA | `www.supermercadosdia.com.ar` | ✅ VTEX vía cuenta `diaio` (`api_host`) |
-| `cooperativa_obrera` | Cooperativa Obrera | `www.lacoopeencasa.coop` | ✅ API propia (búsqueda paginada + catálogo; EAN por enriquecimiento) |
-| `la_banderita` | La Banderita (BB) | `www.labanderita.ar` | ✅ Scraper HTML (paginado + EAN + marcas) |
-| `makro` | Makro | — | ❌ No es VTEX (WordPress), sin API de productos |
-| `diarco`, `vital`, `la_anonima` | — | — | ⚠️ Sin API de precios usable (cubiertas por SEPA o scraping) |
+- todo precio publicado tiene fecha, cadena, sucursal y origen;
+- las limitaciones metodológicas son visibles en el informe y en la presentación;
+- no se extraen datos personales;
+- se respetan los términos de uso y el bajo volumen de consultas.
 
-Agregar una cadena: registrar su `Cadena(id, nombre, host[, api_host])` en
-`constants.py` y, si no es VTEX, extender `etl/conn/` con un cliente nuevo.
+Informe completo:
+[`docs/proyecto/02-documentacion/informe-etica.md`](docs/proyecto/02-documentacion/informe-etica.md).
 
-## Configuración (`.env`)
+---
 
-| Variable | Uso |
-|---|---|
-| `SQL_SERVER` | Instancia (default `localhost\SQLEXPRESS`) |
-| `SQL_DATABASE` | Base (default `precios-supermercados-etl`) |
-| `SQL_USERNAME` / `SQL_PASSWORD` | Usuario SQL. **Vacío = Windows Auth** |
-| `USER_AGENT` | Identificación del cliente HTTP |
-| `HTTP_TIMEOUT` | Timeout por request (s) |
-| `HTTP_REINTENTOS` | Reintentos ante 429/red |
-| `HTTP_PAUSA` | Pausa base entre reintentos (s) |
-| `CADENAS` | Ids habilitados por defecto (coma-separados) |
-| `POR_PAGINA` | Resultados por página |
-| `MAX_PAGINAS` | Páginas máximas por término |
+## Gestión del proyecto
 
-Credenciales y rutas: solo en `.env` (nunca se commitea; ver `.env.template`).
+- Repositorio de la entrega: <https://github.com/Nicaleluc/tp-final-opcb>
+- Repositorio de código: <https://github.com/Nicaleluc/tp2-precios-supermercados-etl>
+- Tablero Trello: <https://trello.com/b/8kXtbi62/opcb-observatorio-de-precios-de-la-canasta-basica>
+- Bitácora y decisiones:
+  [`docs/proyecto/02-documentacion/bitacora.md`](docs/proyecto/02-documentacion/bitacora.md)
+- Sprint planning:
+  [`docs/proyecto/01-planificacion/sprint-planning.md`](docs/proyecto/01-planificacion/sprint-planning.md)
 
-## Esquema del store
+---
 
-| Tabla | Clave | Contenido |
-|---|---|---|
-| `D_PrecioCadena` | `Codigo` | cadena → plataforma, host, cuenta VTEX |
-| `D_PrecioSucursal` | `(CadenaId, CodigoSucursal)` | localidad, dirección, geo, tipo (`SUPER`/`ONLINE`/…) |
-| `D_PrecioProducto` | `(CadenaId, SkuId)` | EAN, nombre, marca, categoría (+ canónica), unidad, URL, imagen |
-| `D_PrecioOferta` | `(ProductoId, SucursalId, Fecha)` | precio, lista, sin impuestos, unitario, promo, stock, origen |
-| `D_Compra` | `CompraId` | fecha, comercio, total |
-| `D_CompraDetalle` | `DetalleId` | ítem, cantidad, unidad, precio unitario, subtotal, EAN, categoría |
-| `D_CompraProductoRef` | `(Item, Cadena)` | fija el SKU exacto por ítem/cadena (y override `$/kg`) |
-| `V_CompraPrecioBarato` | vista | ítems comprados × Coope/Vea/Carrefour/La Banderita + más barato |
-| `V_PrecioNormal` | vista | por EAN: precio normal (mediana SEPA), min/max, referencia, promos |
+## Roadmap
 
-DDL idempotente en `etl/dominios/precios/schema.py` y en `sql/` (001-004);
-se crea solo en la primera carga.
+- [x] Ingesta de cadenas (VTEX, Coope, La Banderita, SEPA)
+- [x] Normalización y matching por EAN
+- [x] Canasta y variación
+- [x] Comparación por producto y brecha entre cadenas
+- [ ] Alertas por umbral
+- [ ] Carga diaria programada
+- [ ] Serie histórica de 12 meses
+- [ ] API pública de consulta
 
-## SEPA (precio por sucursal)
+---
 
-`etl/conn/sepa.py` + `cli/cargar_sepa.py` leen el **ZIP oficial** (estructura
-anidada: `<fecha>/sepa_*_comercio-sepa-*.zip` → `comercio.csv`, `sucursales.csv`,
-`productos.csv`, delimitado por `|`, UTF-8) y lo mapean a:
+## Autor
 
-* `D_PrecioCadena`   (id_comercio + id_bandera → nombre comercial),
-* `D_PrecioSucursal` (dirección/localidad/provincia/geo),
-* `D_PrecioProducto` + `D_PrecioOferta` (**precio por sucursal**, EAN = `id_producto`, `Origen='SEPA'`).
+**Nicolás Lucero** — Administrador de Bases de Datos y estudiante de Ciencia de Datos e IA.
+[GitHub](https://github.com/Nicaleluc) · [LinkedIn](https://www.linkedin.com/in/nicolas-lucero)
 
-Validado con el ZIP real de 2026-10-13 (`INC S.A.` = Carrefour).
-
-Carga **bulk** (staging + MERGE set-based) para los ~12 M de filas/día: los CSV
-se vuelcan a tablas temporales con `fast_executemany` y se hacen `MERGE`/`INSERT`
-de conjuntos. `precio_lista` → `Precio`; `precio_referencia` → `PrecioLista`.
-
-```bash
-py -u -m cli.cargar_sepa --auto                 # baja el ZIP del día y lo carga
-py -u -m cli.cargar_sepa --zip ... --max-grupos 2 --limite 500   # prueba
-```
-
-## Precio normal (SEPA)
-
-`V_PrecioNormal` calcula, por EAN, el **precio normal** como la **mediana entre
-sucursales** del SEPA, más mínimo, máximo, referencia y cantidad de promos.
-`cli.chequear_precio` compara un precio (o los precios cargados de cada cadena)
-contra ese normal:
-
-```bash
-py -u -m cli.chequear_precio --ean 7798338291803
-```
-
-```
-EAN 7798338291803  LECHE C PROTEINA VIDA ACTIVA LAS TRES NINAS X 1LT
-  SEPA: normal $3.119 (mediana de 6 sucursales; min $2.999 / max $3.275; promos 0)
-  Cordiez              $2.269  (-27.3% vs normal)  barato
-  Cooperativa Obrera   $2.290  (-26.6% vs normal)  barato
-  Carrefour            $3.119  (  0.0% vs normal)  normal
-  DIA                  $3.120  (  0.0% vs normal)  normal
-  Vea                  $3.190  ( +2.3% vs normal)  normal
-```
-
-## Comparador cruzado
-
-`cli.comparar` (sin `--vivo`) lee las tablas y cruza **todas** las cadenas
-cargadas. Tres niveles de matching:
-
-* **por nombre** (contiene, normalizado) → resuelve un término de compra;
-* **por EAN** (`--ean <código>`) → el mismo producto entre cadenas, exacto;
-* **fuzzy** (`--producto "<nombre>"`, `etl/dominios/comparador/matching.py`) →
-  equivalentes entre cadenas (rapidfuzz + tamaño/medida), y `--por-unidad` para
-  elegir por **$/kg** o **$/l**.
-
-Cada producto se guarda con `CategoriaCanonica` (rubro unificado,
-`etl/dominios/precios/categorias.py`), para agrupar por rubro.
-
-### Ejemplo de resultado real: el mismo producto en todas las cadenas
-
-Comparación del EAN `7790742358608` (leche La Serenísima Protein 1 L) entre las
-cadenas cargadas, tomando el último precio de cada una:
-
-| Cadena | Precio | Fecha |
-|---|---:|---|
-| Cordiez | 2.669,00 | 19/10/2026 |
-| La Banderita | 2.699,00 | 19/10/2026 |
-| Vea | 3.118,00 | 19/10/2026 |
-| DIA | 3.119,00 | 19/10/2026 |
-| Cooperativa Obrera | 3.119,00 | 19/10/2026 |
-| Carrefour | 3.119,00 | 19/10/2026 |
-| Hipermercado Carrefour | 3.119,00 | 13/10/2026 |
-| Market | 3.180,00 | 13/10/2026 |
-| Express | 3.275,00 | 13/10/2026 |
-
-La diferencia entre la cadena más barata y la más cara es del **22,7 %** para el
-mismo producto. La consulta que genera la tabla:
-
-```sql
-WITH ult AS (
-  SELECT o.ProductoId, o.Precio, o.Fecha,
-         ROW_NUMBER() OVER (PARTITION BY p.CadenaId
-                            ORDER BY o.Fecha DESC, o.OfertaId DESC) AS rn
-  FROM D_PrecioOferta o
-  JOIN D_PrecioProducto p ON p.ProductoId = o.ProductoId
-  WHERE p.Ean = '7790742358608'
-)
-SELECT c.Nombre AS Cadena, p.Nombre AS Producto, u.Precio, u.Fecha
-FROM ult u
-JOIN D_PrecioProducto p ON p.ProductoId = u.ProductoId
-JOIN D_PrecioCadena  c ON c.CadenaId = p.CadenaId
-WHERE u.rn = 1
-ORDER BY u.Precio;
-```
-
-Captura de la consulta en SSMS:
-
-![Comparación del mismo producto entre cadenas](capturas/comparacion-cadenas-protein-1l.jpg)
-
-## Compras y vista de mejor precio
-
-`cli.registrar_compra` guarda la compra (`D_Compra` + `D_CompraDetalle`) y la
-vista `V_CompraPrecioBarato` la cruza con el último precio por cadena:
-
-```sql
-SELECT * FROM dbo.V_CompraPrecioBarato;
-```
-
-| Ítem | Unidad | Coope | Vea | Carrefour | La Banderita | MasBarato |
-|---|---|---|---|---|---|---|
-| Banana | kg | — | 2.499 | 1.999 | — | 1.999 |
-| Brócoli | kg | — | 4.999 | 5.999 | — | 4.999 |
-
-La vista usa `D_CompraProductoRef` para fijar el **SKU exacto** de cada
-ítem/cadena (y `PrecioPorKg` para packs); si no hay ref, cae al mejor match por
-nombre. Para el cuadro de productos puntuales (por EAN/nombre) está
-`sql/consulta_productos.sql`.
-
-## Automatización
-
-```bash
-programar_tareas.bat   # diaria 07:00 (precios+sucursales+SEPA) + semanal dom 03:00 (catálogo)
-cargar_diario.bat      # diaria headless (logs en logs/)
-cargar_semanal.bat     # catálogo completo headless (logs/catalogo.log)
-cargar_sepa.bat        # SEPA del día
-```
-
-## Estructura
-
-```
-cargar.bat / cargar_sucursales.bat / cargar_todo.bat / cargar_diario.bat /
-cargar_semanal.bat / cargar_sepa.bat / comparar.bat
-programar_diario.bat / programar_tareas.bat
-cli/importar_precios.py           # extract + flags (--catalogo, --ean-ficha)
-cli/comparar.py                   # comparador (base por defecto; --vivo, --ean, --producto)
-cli/cargar_sucursales.py          # sucursales a D_PrecioSucursal
-cli/cargar_sepa.py                # SEPA (--auto / --zip)
-cli/registrar_compra.py           # registra compras (D_Compra/Detalle)
-cli/chequear_precio.py            # compara un precio contra el normal de SEPA
-cli/enriquecer_ean_coope.py       # mapea EAN -> cod_interno de la Coope
-config/settings.py                # lee .env (SQL_*, HTTP_*, cadenas)
-etl/conn/db.py                    # pyodbc + SQLAlchemy (ODBC Driver 18, Windows Auth)
-etl/conn/vtex.py                  # cliente VTEX (búsqueda, EAN, categorías)
-etl/conn/coope.py                 # cliente de la API de La Coope en Casa
-etl/conn/la_banderita.py          # scraper HTML (paginado + EAN)
-etl/conn/sepa.py                  # lector de ZIP/CSV de SEPA
-etl/dominios/precios/constants.py # registro de cadenas + términos semilla
-etl/dominios/precios/modelos.py   # Producto, Oferta
-etl/dominios/precios/categorias.py# categoría canónica entre cadenas
-etl/dominios/precios/normalizar*.py # VTEX / Coope / La Banderita -> Oferta
-etl/dominios/precios/schema.py    # DDL SQL Server idempotente (+ migraciones)
-etl/dominios/precios/repository.py# upserts con MERGE
-etl/dominios/precios/importer.py  # extract por plataforma / catálogo
-etl/dominios/precios/sucursales.py# semilla BB + localidades Coope
-etl/dominios/comparador/canasta.py# cotizar en vivo + recomendar
-etl/dominios/comparador/cruzado.py# comparar sobre la base + EAN + equivalentes
-etl/dominios/comparador/matching.py# similitud, medida, precio por unidad
-sql/001_create_precios_supermercados.sql  # tablas + índices
-sql/002_compras.sql                       # compras (cabecera/detalle)
-sql/003_vista_compras.sql                 # vista V_CompraPrecioBarato
-sql/004_ref_productos.sql                 # refs de SKU por ítem/cadena
-sql/005_migrar_datos.sql                  # migración desde otra base (opcional)
-sql/006_precio_normal.sql                 # vista V_PrecioNormal
-sql/consulta_productos.sql                # cuadro por EAN/nombre
-tests/                            # transform, matching, integración (DB se salta si no hay)
-```
-
-## Tests
-
-```bash
-py -m pytest -q
-```
-
-- `test_normalizar.py` y `test_matching.py`: pruebas unitarias, sin red ni base de datos.
-- `test_integracion.py`: prueba de integración contra SQL Server; se salta automáticamente si no hay conexión.
-
-## Buenas prácticas / notas técnicas
-
-* **HTTP**: retries con backoff ante `429`/red, `User-Agent` identificable,
-  pausa configurable. Sin martillar el sitio.
-* **SQL siempre parametrizado** (sin literales inline): ver `repository.py`
-  (`MERGE ... USING (VALUES (...))` con `?`).
-* **Idempotencia** en todo el load (`MERGE` por clave lógica).
-* **Truncado seguro**: los textos se recortan a la longitud de columna (`_txt`).
-* **Modelo único entre cadenas**: la variación de plataforma vive en `etl/conn/`;
-  el dominio solo conoce `Producto`/`Oferta`.
-* **`temp/`**: solo en la raíz del repo; se vacía al cerrar sesión.
-
-## Pendientes conocidos
-
-* **La Anónima**: su backend online está caído (`RedisException`) y el endpoint de
-  listado no se pudo descubrir; SEPA la cubre.
-* **Diarco / Vital / Makro**: sin API de precios usable → SEPA (mayorista) o scraping.
-* **Catálogo completo**: el código existe (`--catalogo`), pero es pesado; está
-  programado semanal (no diario).
-* **EAN de La Banderita**: parcial o completo con `--ean-ficha`.
-
-## Solución de problemas
-
-| Síntoma | Causa / solución |
-|---|---|
-| `Can't open lib 'ODBC Driver 18 for SQL Server'` | Falta el ODBC Driver 18 en el host. |
-| `Login failed` | Completar `SQL_USERNAME`/`SQL_PASSWORD` o habilitar Windows Auth. |
-| `String or binary data would be truncated` | Un campo supera su columna; ya se recorta con `_txt`. |
-| `sin host confirmado, se saltea` | Cadena en el registro sin `host` (ej. `makro`, `diarco`). Completar en `constants.py`. |
-| `GET ... falló tras N intentos` | Red, proxy o el endpoint cambió. Verificar con DevTools → Network. |
-| Precios en `0` o vacíos | El sitio devolvió otro formato; revisar el JSON crudo y ajustar `normalizar.py`. |
-
-## Conclusiones personales
-
-Este proyecto me obligó a resolver el problema que más me interesa de la ingeniería
-de datos: que fuentes heterogéneas —una API VTEX, la API de la Coope y el scraping de
-una cadena local— terminen en un modelo único y confiable. La tentación es escribir un
-scraper por cadena; la decisión correcta es aislar la variación en `etl/conn/` y dejar
-que el dominio conozca solo `Producto` y `Oferta`. Esa separación es la diferencia
-entre un script que funciona hoy y un sistema que se puede mantener.
-
-Lo que más me costó no fue el código, sino la idempotencia. Vengo de administrar bases
-de producción y sé que un ETL que duplica filas es peor que un ETL que no corre. Por
-eso el load usa `MERGE` por clave lógica y el histórico de precios se guarda por día:
-si el proceso se corta a mitad de camino, se puede volver a ejecutar sin miedo.
-
-Aprendí también que documentar es parte de construir. El README no es un adorno: es la
-interfaz con quien va a operar el sistema, y por eso incluye requisitos, variables de
-entorno, solución de problemas y pendientes conocidos. En Git, los commits pequeños y
-descriptivos me permitieron reconstruir decisiones semanas después; es la misma
-disciplina que aplico cuando audito un cambio en una base de datos.
-
-Si tuviera que mejorarlo, sumaría más pruebas de integración contra un SQL Server de
-prueba y un tablero de monitoreo de precios faltantes. Pero el aprendizaje central ya
-está: un pipeline se juzga por lo que hace cuando algo falla, no solo cuando todo sale
-bien.
+Proyecto académico — Instituto Nuevos Aires, Prácticas Profesionalizantes I (2026).
 
 ## Licencia
 
-MIT — ver [`LICENSE`](LICENSE). Uso libre con atribución (conservar aviso de
-copyright).
+MIT. Ver [`LICENSE`](LICENSE).

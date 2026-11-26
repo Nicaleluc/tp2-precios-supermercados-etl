@@ -189,7 +189,7 @@ automático con su variación, en un plazo de diez días y con documentación co
 |---|---|---|---|
 | **Sprint 0 — Planificación** | 14–16 nov | definición, objetivos, alcance, roles, backlog, tablero, repositorio | planificación aprobada |
 | **Sprint 1 — Datos y canasta** | 17–20 nov | ingesta, normalización, canasta, cálculo, tests | dataset + canasta calculada |
-| **Sprint 2 — Producto y cierre** | 21–23 nov | matching, comparación, dashboard, informe, README, ética | MVP + documentación |
+| **Sprint 2 — Producto y cierre** | 21–24 nov | matching, comparación, dashboard, informe, README, ética | MVP + documentación |
 | **Entrega** | 24 nov | revisión final, PDF, enlaces, ensayo | entrega en el aula virtual |
 | **Defensa** | semana 16 | presentación y preguntas del comité | presentación oral |
 

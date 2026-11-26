@@ -30,7 +30,7 @@ priorizado, tablero y repositorio creados.
 | Construir y estimar el product backlog | `product-backlog.md` | implementado |
 | Planificar sprints y capacidad | `sprint-planning.md` | implementado |
 | Diseñar la estructura del tablero Trello | `03-trello/` | implementado |
-| Crear el repositorio y el README base | [github.com/Nicaleluc/tp2-precios-supermercados-etl](https://github.com/Nicaleluc/tp2-precios-supermercados-etl) | implementado |
+| Crear los repositorios y el README base | [tp-final-opcb](https://github.com/Nicaleluc/tp-final-opcb) · [tp2-precios-supermercados-etl](https://github.com/Nicaleluc/tp2-precios-supermercados-etl) | implementado |
 | Redactar el borrador del informe de ética | `02-documentacion/informe-etica.md` | implementado |
 
 **Revisión del Sprint 0:** el alcance quedó cerrado en 24 puntos Must. Se excluyeron predicción,

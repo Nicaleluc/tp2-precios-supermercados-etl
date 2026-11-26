@@ -23,7 +23,7 @@ sobre lo medido.
 |---|---|
 | **Exactitud y no daño** | ningún precio se publica sin trazabilidad de origen; un dato dudoso se excluye, no se corrige a mano |
 | **Transparencia** | metodología, fórmula de variación, criterio de canasta y limitaciones visibles en el dashboard y el informe |
-| **Equidad** | la canasta no se limita a productos de una góndola ni a un barrio; se documenta su composición y a quién representa |
+| **Equidad** | la canasta no se limita a productos de una góndola ni a un barrio; se documenta su composición y a quién representa (Barocas & Selbst, 2016) |
 | **Privacidad** | el MVP no recolecta datos personales; si se incorpora registro de compras, se aplica minimización y Ley N.º 25.326 |
 | **Responsabilidad** | cada versión del dataset y del informe queda identificada; hay un responsable explícito |
 | **Humildad epistémica** | el sistema describe precios observados; no predice ni atribuye causas |
@@ -49,7 +49,8 @@ Atribuir ese error a una cadena es una acusación infundada.
 
 **Mitigación:** priorizar el EAN como llave, usar similitud de texto solo como respaldo, validar la
 unidad antes de comparar y mantener un umbral de confianza. Los pares dudosos se excluyen y se
-informan como "no comparables". Antes de publicar, se revisa manualmente la canasta completa. La
+informan como "no comparables". Antes de publicar, se revisa manualmente la canasta completa, sin
+asumir que la revisión humana por sí sola corrige un diseño sesgado (Green, 2022). La
 regla es explícita: **es preferible un dato faltante a un dato incorrecto**.
 
 ### Riesgo 3 — Condiciones de uso y extracción de datos

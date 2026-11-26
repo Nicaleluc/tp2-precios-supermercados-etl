@@ -49,7 +49,7 @@ La consigna califica cuatro componentes. Esta carpeta los resuelve así:
 | Product backlog priorizado y estimado | implementado | — |
 | Sprint planning (Sprint 0, 1 y 2) | implementado | — |
 | Tablero Trello (7 listas, 21 tarjetas) | implementado | tablero **público**: link en `03-trello/README.md` 7.0; etiquetas, fechas y descripciones se cargan desde `tablero-import.csv` |
-| Repositorio GitHub con código y commits | implementado | entrega publicada en `tp-final-opcb`; código en `tp2-precios-supermercados-etl` (9 commits) |
+| Repositorio GitHub con código y commits | implementado | entrega publicada en `tp-final-opcb`; código en `tp2-precios-supermercados-etl` (commits significativos) |
 | README del repositorio | implementado | publicado en el repo; borrador en `02-documentacion/README-repositorio.md` |
 | Informe de ética | implementado | revisión final de citas |
 | Bitácora de trabajo | implementado | registro de Sprint 0, 1 y 2 en `02-documentacion/bitacora.md` |
@@ -77,7 +77,7 @@ La consigna califica cuatro componentes. Esta carpeta los resuelve así:
 |---|---|---|
 | 14–16 nov | Sprint 0 — planificación | definición, roles, backlog, tablero, repo creado |
 | 17–20 nov | Sprint 1 — ingesta y canasta | dataset normalizado + costo de canasta + tests |
-| 21–23 nov | Sprint 2 — producto y cierre | dashboard, informe, README, ética, presentación |
+| 21–24 nov | Sprint 2 — producto y cierre | dashboard, informe, README, ética, presentación |
 | 24 nov | Entrega y ensayo | PDF/links en el aula virtual |
 | Semana 16 | Defensa oral | presentación y respuestas al comité |
 

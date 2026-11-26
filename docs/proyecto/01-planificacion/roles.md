@@ -80,7 +80,7 @@ explícita:
 | Artefacto | Dónde vive | Regla de uso |
 |---|---|---|
 | **Product Backlog** | `product-backlog.md` + lista Trello "Product Backlog" | solo el PO prioriza; toda historia tiene criterios de aceptación |
-| **Sprint Backlog** | `sprint-planning.md` + lista Trello "Sprint actual" | se congela al inicio del sprint |
+| **Sprint Backlog** | `sprint-planning.md` + listas Trello "Sprint 1" y "Sprint 2" | se congela al inicio del sprint |
 | **Incremento** | repositorio GitHub (tag por sprint) | debe cumplir la DoD |
 | **Tablero** | Trello (listas: Backlog, Sprint, En curso, En revisión, Hecho, Impedimentos) | se actualiza a diario |
 
