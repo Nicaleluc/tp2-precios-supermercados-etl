@@ -1,4 +1,11 @@
 # precios-supermercados-etl — Precios de supermercados → SQL Server + comparador
+
+> **Proyecto Integrador Final (2026):** este repositorio se reutiliza como base del
+> **Observatorio de Precios de la Canasta Básica (OPCB)**. La planificación, el informe de
+> ética, el tablero y el guion de la presentación están en
+> [`docs/proyecto/`](docs/proyecto/README.md). El contenido de abajo documenta el ETL original
+> del TP II, que sigue siendo la base técnica del proyecto.
+
 > **Trabajo Práctico II — Prácticas Profesionalizantes I (INA)**  
 > Estudiante: Nicolás Lucero · Docente: MSc. Ángel Daniel Fuentes S. · Entrega: 26/10/2026  
 > Parte 2 (reflexión sobre Scrum): [`respuestas_scrum.md`](respuestas_scrum.md)

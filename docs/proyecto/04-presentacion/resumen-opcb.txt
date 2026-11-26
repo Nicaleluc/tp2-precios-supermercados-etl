@@ -1,0 +1,89 @@
+OBSERVATORIO DE PRECIOS DE LA CANASTA BÁSICA (OPCB)
+Prácticas Profesionalizantes I - Nicolás Lucero - INA
+======================================================
+
+
+QUÉ ES
+------
+Un proyecto de ciencia de datos que mide cuánto cuesta una canasta
+básica de 30 productos en 3 supermercados de Bahía Blanca y muestra
+cómo cambia su precio semana a semana.
+
+Es un proyecto simulado: el cliente (Asociación de Consumidores de
+Bahía Blanca) es ficticio, pero los datos son reales y públicos y el
+código es propio. Se basa en el ETL de precios del TP II.
+
+
+EL PROBLEMA
+-----------
+Cada supermercado publica sus precios a su manera: nombres distintos,
+unidades distintas, códigos distintos. Comparar la misma canasta a mano
+son 90 búsquedas por semana y no queda ningún registro verificable.
+
+Para una asociación de consumidores eso es grave: sin una serie
+comparable y trazable, cualquier denuncia pública no tiene respaldo.
+
+
+QUÉ HACE
+--------
+1. Baja los catálogos de 3 cadenas: SEPA, La Banderita y Coope.
+2. Normaliza nombres, unidades y código EAN.
+3. Empareja el mismo producto entre cadenas (matching).
+4. Calcula el costo de la canasta y su variación semanal.
+5. Publica un dashboard y genera un informe automático.
+
+Todo corre con un comando. Si una cadena falla, las otras siguen y el
+error queda registrado.
+
+
+CÓMO ESTÁ HECHO
+---------------
+Fuentes web  ->  ETL  ->  normalización  ->  matching  ->  SQL Server
+             ->  cálculo de canasta  ->  dashboard + informe
+
+Herramientas: Python, SQL Server, pytest, Git/GitHub, Trello.
+
+
+METODOLOGÍA
+-----------
+Scrum adaptado a una sola persona (Product Owner, Scrum Master y
+desarrollo). Sprints de 4 días, ceremonias reducidas y definición de
+terminado obligatoria: código + test + documentación + commit.
+
+- Backlog de 10 historias MVP = 24 puntos, priorizadas con MoSCoW.
+- 14 horas por sprint, 32 horas en total.
+- Primero la cadena de datos, después el dashboard. Nunca al revés.
+
+
+ALCANCE
+-------
+INCLUYE: 3 cadenas, 30 productos, costo y variación, dashboard,
+informe automático, tests y documentación.
+
+NO INCLUYE: predicción de precios, app móvil, integración con ERP ni
+publicación en producción. Están en el backlog futuro, priorizados
+y documentados. El recorte es una decisión profesional, no una falta.
+
+
+ÉTICA
+-----
+Cinco riesgos con un control cada uno: representatividad de la canasta,
+identificación errónea de productos, condiciones de uso de los sitios,
+sobrepromesa de resultados y privacidad futura.
+
+Frase: "En un observatorio de precios, un dato mal presentado es peor
+que un dato faltante."
+
+
+ARTEFACTOS ENTREGADOS
+---------------------
+- Planificación: definición, objetivos, alcance, roles, backlog, sprints.
+- Ejecución: tablero Trello (estructura) y bitácora.
+- Documentación: README del repositorio e informe de ética.
+- Presentación final: guion y diapositiva.
+
+
+IDEA PARA CERRAR LA DEFENSA
+---------------------------
+"Pasé de administrar bases a construir un producto de datos con
+criterio profesional y límites explícitos."

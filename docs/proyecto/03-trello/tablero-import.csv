@@ -1,0 +1,22 @@
+﻿Card,List,Description,Labels,Due Date
+Hecho,Definir problema y alcance,"Problema, objetivos, alcance y stakeholders. Ver 01-planificacion/proyecto.md",planificacion,2026-11-16
+Hecho,Definir roles y ceremonias,"Equipo simulado, RACI y calendario de ceremonias. Ver roles.md",planificacion,2026-11-16
+Hecho,Armar product backlog,10 historias MVP (24 pts) + 4 de backlog futuro. Ver product-backlog.md,planificacion,2026-11-16
+Hecho,Planificar sprints,"Capacidad, sprint goals y sprint backlogs. Ver sprint-planning.md",planificacion,2026-11-16
+Hecho,Diseñar tablero Trello,"Estructura de 7 listas, límites WIP y carga inicial de tarjetas",herramientas,2026-11-16
+Hecho,Redactar informe de ética,Cinco riesgos con un control cada uno. Ver informe-etica.md,documentacion,2026-11-16
+Hecho,Crear repositorio GitHub,"Estructura, README y commits iniciales",herramientas,2026-11-16
+Sprint 1,HU-01 Ingesta de tres cadenas,"Conectores SEPA, La Banderita y Coope, aislados entre sí. 3 pts","must,datos",2026-11-20
+Sprint 1,HU-02 Histórico con fecha y origen,"Cada precio guardado con fecha, sucursal y origen. 2 pts","must,datos",2026-11-20
+Sprint 1,HU-03 Normalización,"Nombres, unidades y EAN. 3 pts","must,datos",2026-11-20
+Sprint 1,HU-04 Canasta de 30 productos,Composición documentada y criterio de inclusión. 2 pts,"must,producto",2026-11-20
+Sprint 1,HU-05 Costo y variación,Costo total de la canasta y variación contra la semana anterior. 2 pts,"must,producto",2026-11-20
+Sprint 2,HU-06 Matching entre cadenas,EAN exacto primero; similitud de nombre y unidad después. 3 pts,"must,datos",2026-11-23
+Sprint 2,HU-07 Comparación y brecha,"Mismo producto entre cadenas: mínimo, máximo y brecha. 2 pts","must,producto",2026-11-23
+Sprint 2,HU-08 Dashboard,"Evolución, comparación y nota metodológica. 3 pts","must,producto",2026-11-23
+Sprint 2,HU-09 Informe automático,"Metodología, resultados y limitaciones. 2 pts","must,documentacion",2026-11-23
+Sprint 2,HU-10 Calidad y trazabilidad,"Tests, descarte de precios inválidos y registro de descartes. 2 pts","must,calidad",2026-11-23
+Product Backlog,HU-11 Alertas por umbral,Futuro: aviso cuando la canasta supera un aumento definido,should,
+Product Backlog,HU-12 Ficha de producto,Futuro: historial de precio por producto,should,
+Product Backlog,HU-13 Carga diaria programada,Futuro: automatizar la ejecución del pipeline,should,
+Product Backlog,HU-14 Predicción de precios,Futuro: requiere serie histórica suficiente,wont,
