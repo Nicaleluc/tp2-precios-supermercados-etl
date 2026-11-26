@@ -67,6 +67,10 @@ Además, el historial de actividad de Trello (menú → **Actividad**) sirve com
 hora. Se puede exportar el tablero a JSON desde **Menú → Más → Imprimir, exportar y compartir →
 Exportar como JSON** y guardarlo como `tablero-export.json`.
 
+> Al cierre se conserva `capturas/05-tablero-final.png` (captura del tablero público). Las capturas
+> intermedias se tomaron durante los sprints y no se versionaron para no inflar el repositorio; el
+> historial de actividad de Trello y `tablero.md` quedan como registro del flujo.
+
 ## 7.5 Tablero espejo (respaldo en Markdown)
 
 `tablero.md` reproduce el estado del tablero sin depender de Trello. Sirve para dos cosas: dejar
