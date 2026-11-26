@@ -51,7 +51,7 @@ La consigna califica cuatro componentes. Esta carpeta los resuelve así:
 | Tablero Trello (7 listas, 21 tarjetas) | implementado | tablero **público**: link en `03-trello/README.md` 7.0; etiquetas, fechas y descripciones se cargan desde `tablero-import.csv` |
 | Repositorio GitHub con código y commits | implementado | entrega publicada en `tp-final-opcb`; código en `tp2-precios-supermercados-etl` (commits significativos) |
 | README del repositorio | implementado | publicado en el repo; borrador en `02-documentacion/README-repositorio.md` |
-| Informe de ética | implementado | revisión final de citas |
+| Informe de ética | implementado | — |
 | Bitácora de trabajo | implementado | registro de Sprint 0, 1 y 2 en `02-documentacion/bitacora.md` |
 | Presentación oral | implementado (deck) · parcial (ensayo) | 8 diapositivas listas; falta ensayo cronometrado |
 | Dashboard (vista estática) | implementado | `04-presentacion/dashboard-opcb.html`; el pipeline completo se ejecuta sobre la base |
