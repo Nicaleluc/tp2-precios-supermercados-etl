@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OPCB — Observatorio de Precios de la Canasta Básica</title>
+<style>
+  :root { --azul:#264653; --verde:#2a9d8f; --rojo:#c1121f; --gris:#e9ecef; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: "Segoe UI", system-ui, sans-serif; background:#f8f9fa; color:#212529; }
+  header { background:var(--azul); color:#fff; padding:28px 24px; }
+  header h1 { margin:0 0 6px; font-size:1.6rem; }
+  header p { margin:0; opacity:.85; font-size:.95rem; }
+  main { max-width:1000px; margin:0 auto; padding:24px; }
+  .nota { background:#fff3cd; border-left:4px solid #ffc107; padding:12px 16px; font-size:.9rem; margin-bottom:24px; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:28px; }
+  .kpi { background:#fff; border:1px solid var(--gris); border-radius:10px; padding:16px; }
+  .kpi .valor { font-size:1.7rem; font-weight:700; color:var(--azul); }
+  .kpi .label { font-size:.82rem; color:#6c757d; margin-top:4px; }
+  section { background:#fff; border:1px solid var(--gris); border-radius:10px; padding:20px; margin-bottom:24px; }
+  section h2 { margin-top:0; font-size:1.15rem; color:var(--azul); }
+  .rango { display:flex; align-items:center; gap:12px; margin:18px 0; }
+  .barra { flex:1; height:26px; background:var(--gris); border-radius:6px; position:relative; overflow:hidden; }
+  .barra .min { position:absolute; left:0; top:0; bottom:0; width:0; background:var(--verde); }
+  .barra .max { position:absolute; right:0; top:0; bottom:0; width:18.5%; background:var(--rojo); }
+  .precio { font-weight:700; white-space:nowrap; }
+  .min-p { color:var(--verde); } .max-p { color:var(--rojo); }
+  table { width:100%; border-collapse:collapse; font-size:.92rem; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--gris); }
+  th { color:#6c757d; font-weight:600; }
+  footer { text-align:center; color:#6c757d; font-size:.8rem; padding:24px; }
+  code { background:var(--gris); padding:1px 5px; border-radius:4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>OPCB · Observatorio de Precios de la Canasta Básica</h1>
+  <p>Vista estática del caso de prueba — datos del relevamiento 13–20/10/2026</p>
+</header>
+<main>
+  <div class="nota">
+    <strong>Nota metodológica:</strong> esta es una vista estática del caso de prueba.
+    El dashboard completo se obtiene ejecutando el pipeline sobre la base (ver README del repositorio).
+    Las cifras se recalculan desde las tablas <code>D_Precio*</code>.
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="valor">33.900</div><div class="label">Precios observados</div></div>
+    <div class="kpi"><div class="valor">21.235</div><div class="label">Productos en catálogo</div></div>
+    <div class="kpi"><div class="valor">14.356</div><div class="label">EAN distintos</div></div>
+    <div class="kpi"><div class="valor">1.491</div><div class="label">Comparables en ≥ 3 cadenas</div></div>
+    <div class="kpi"><div class="valor">12</div><div class="label">Cadenas con datos</div></div>
+  </div>
+
+  <section>
+    <h2>Caso de prueba — Leche Protein 1 L (EAN 7790742358608)</h2>
+    <p>Nueve góndolas, siete nombres distintos, el mismo producto:</p>
+    <div class="rango">
+      <span class="precio min-p">$2.669</span>
+      <div class="barra"><div class="min"></div><div class="max"></div></div>
+      <span class="precio max-p">$3.275</span>
+    </div>
+    <table>
+      <tr><th>Indicador</th><th>Valor</th></tr>
+      <tr><td>Precio mínimo</td><td>$2.669</td></tr>
+      <tr><td>Precio máximo</td><td>$3.275</td></tr>
+      <tr><td>Brecha absoluta</td><td>$606</td></tr>
+      <tr><td>Brecha relativa</td><td>22,7 %</td></tr>
+      <tr><td>Góndolas relevadas</td><td>9</td></tr>
+      <tr><td>Nombres distintos</td><td>7</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Qué muestra el producto</h2>
+    <ul>
+      <li>Evolución del costo de la canasta en el tiempo.</li>
+      <li>Comparación entre cadenas para una misma fecha.</li>
+      <li>Brecha en pesos y en porcentaje respecto de la cadena más barata.</li>
+      <li>Fecha de actualización y limitaciones visibles.</li>
+    </ul>
+  </section>
+
+  <footer>
+    OPCB — Prácticas Profesionalizantes I · Nicolás Lucero · INA 2026<br>
+    Datos públicos · código propio · sin datos personales
+  </footer>
+</main>
+</body>
+</html>

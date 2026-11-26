@@ -127,6 +127,7 @@ py -u -m cli.cargar_sepa                      # cadena SEPA
 py -u -m cli.comparar leche yerba aceite      # comparación sobre la base (o comparar.bat)
 py -u -m cli.comparar --ean 7790742358608     # un producto en todas las cadenas
 py -u -m cli.chequear_precio <termino>        # control puntual de precio
+py -u -m cli.generar_informe                  # informe automático en Markdown
 ```
 
 ### 5. Tests
@@ -189,6 +190,7 @@ tp2-precios-supermercados-etl/
 ├── sql/                 # esquema y migraciones (D_Precio*, compras, vistas)
 ├── tests/               # pruebas
 ├── capturas/            # evidencias (comparaciones, tablero)
+├── dashboard/           # vista estática del caso de prueba
 ├── docs/proyecto/       # planificación, documentación, trello y presentación
 ├── *.bat                # atajos de ejecución
 ├── .env.template
